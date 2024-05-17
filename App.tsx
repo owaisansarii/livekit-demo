@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   Platform,
   findNodeHandle,
+  TextInput,
 } from 'react-native';
 
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
@@ -66,37 +67,8 @@ function App(): React.JSX.Element {
       return true;
     } else return false;
   };
-  const [token, setToken] = React.useState<string | null>(null);
+
   const [connected, setConnected] = React.useState<boolean>(false);
-  const createRoom = async () => {
-    const body = {
-      roomName: 'testRoom',
-      description: 'hhh',
-      thumbnail: '',
-      textThumbnail: Math.random().toString(36).substring(7),
-      language: 'Hindi',
-      room_cteate_by: 'user',
-      is_private: false,
-      roomType: 'video',
-      groupInfo: [],
-      is_paid: false,
-    };
-    let apiData = {
-      method: 'POST',
-      url: 'https://whalesbook-app.whalesbook.com/livekit/create-room',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization:
-          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZGVudGlmaWVyIjoiNjYzNWUzMGE5NWRkMmYyYzljZjhmYjExIiwiYXV0aG9yaXNlZCI6ZmFsc2UsImlhdCI6MTcxNTk2OTcxN30.AVDyV4h6jk4RQEQdxPp0oUMWrqzf4aOdkWhmQz3Lyq8',
-      },
-      data: body,
-    };
-    const response = await axios(apiData);
-    const {token} = response.data;
-    console.log('token', token);
-    setToken(token);
-  };
 
   // useEffect(() => {
   //   createRoo
@@ -107,6 +79,9 @@ function App(): React.JSX.Element {
   }, []);
   // }, []);
 
+  const [roomDetails, setRoomDetails] = React.useState<any>({});
+  const [start, setStart] = React.useState<boolean>(false);
+  console.log('roomDetails', roomDetails);
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
@@ -120,27 +95,71 @@ function App(): React.JSX.Element {
           justifyContent: 'center',
           alignItems: 'center',
         }}>
-        <LiveKitRoom
-          serverUrl={'wss://whalesnet.livekit.cloud'}
-          token={
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTU5Nzc3MDUsImlzcyI6IkFQSU1wcVBZSmpMRzNCUyIsIm5iZiI6MTcxNTk3NjgwNSwic3ViIjoiYSIsInZpZGVvIjp7ImNhblB1Ymxpc2giOnRydWUsImNhblB1Ymxpc2hEYXRhIjp0cnVlLCJjYW5TdWJzY3JpYmUiOnRydWUsInJvb20iOiJ3aGFsZXN0ZXN0Iiwicm9vbUpvaW4iOnRydWV9fQ.aavJYiNGvNXTWN8yGqWZYVQ-1xqrw0qJPpj3v0UfqmA'
-          }
-          connect={true}
-          onError={error => {
-            console.log('error', error);
-          }}
-          onConnected={() => {
-            setConnected(true);
-          }}
-          options={{
-            adaptiveStream: {pixelDensity: 'screen'},
-            disconnectOnPageLeave: true,
-          }}
-          audio={false}
-          video={false}>
-          <Text>Room View</Text>
-          {connected ? <RoomView /> : <Text>Connecting...</Text>}
-        </LiveKitRoom>
+        {!start ? (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: 'gray',
+                borderWidth: 1,
+                width: 300,
+              }}
+              onChangeText={text => setRoomDetails({...roomDetails, url: text})}
+              value={roomDetails.url}
+              placeholder="url"
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: 'gray',
+                borderWidth: 1,
+                width: 300,
+              }}
+              onChangeText={text =>
+                setRoomDetails({...roomDetails, token: text})
+              }
+              value={roomDetails.token}
+              placeholder="token"
+            />
+            <TouchableOpacity
+              onPress={() => setStart(true)}
+              style={{
+                width: 100,
+                height: 50,
+                backgroundColor: 'red',
+                justifyContent: 'center',
+                alignItems: 'center',
+                margin: 10,
+              }}>
+              <Text>Connect</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <LiveKitRoom
+            serverUrl={roomDetails.url}
+            token={roomDetails.token}
+            connect={true}
+            onError={error => {
+              console.log('error', error);
+            }}
+            onConnected={() => {
+              setConnected(true);
+            }}
+            options={{
+              adaptiveStream: {pixelDensity: 'screen'},
+              disconnectOnPageLeave: true,
+            }}
+            audio={false}
+            video={false}>
+            <Text>Room View</Text>
+            {connected ? <RoomView /> : <Text>Connecting...</Text>}
+          </LiveKitRoom>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -162,8 +181,15 @@ const RoomView = () => {
             margin: 10,
             padding: 10,
           }}>
-          <Text style={{color: 'white'}}>{item.publication.trackName}</Text>
-          <VideoTrack track={item.track} />
+          <Text style={{color: 'white'}}>{item.participant.name}</Text>
+          <VideoTrack
+            trackRef={item}
+            style={{
+              flexDirection: 'column',
+              height: '100%',
+              width: '100%',
+            }}
+          />
         </View>
       );
     } else {
@@ -261,13 +287,11 @@ const RoomView = () => {
         flex: 1,
         alignItems: 'stretch',
         justifyContent: 'center',
-        backgroundColor: 'blue',
         width: '100%',
       }}>
       <View
         style={{
           flex: 1,
-          backgroundColor: 'blue',
         }}>
         <FlatList
           data={tracks}
@@ -288,7 +312,7 @@ const RoomView = () => {
           bottom: 0,
           left: 0,
         }}>
-        <Text>Start</Text>
+        <Text>Start Screen Share</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => {
