@@ -141,8 +141,8 @@ function App(): React.JSX.Element {
           </View>
         ) : (
           <LiveKitRoom
-            serverUrl={roomDetails.url}
-            token={roomDetails.token}
+            serverUrl={roomDetails.url.trim()}
+            token={roomDetails.token.trim()}
             connect={true}
             onError={error => {
               console.log('error', error);
